@@ -51,3 +51,14 @@ export async function protect(req, res, next) {
     });
   }
 }
+
+// Check that the logged-in user is a seller
+export function sellerOnly(req, res, next) {
+  if (!req.user || req.user.role !== "seller") {
+    return res.status(403).json({
+      message: "Seller access required",
+    });
+  }
+
+  next();
+}
