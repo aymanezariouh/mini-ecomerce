@@ -110,3 +110,119 @@ export async function createOrder(req, res) {
     });
   }
 }
+
+// GET customer orders
+export async function getMyOrders(req, res) {
+  try {
+    const orders = await Order.find({
+      customer: req.user._id,
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json(orders);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: { message: "Error fetching orders" },
+    });
+  }
+}
+
+// GET all orders (seller)
+export async function getAllOrders(req, res) {
+  try {
+    const orders = await Order.find()
+      .populate("customer", "name email")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json(orders);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: { message: "Error fetching orders" },
+    });
+  }
+}
+
+// GET one order
+export async function getOrderById(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: { message: "Invalid order ID" },
+      });
+    }
+
+    const order = await Order.findById(id);
+
+    if (!order) {
+      return res.status(404).json({
+        error: { message: "Order not found" },
+      });
+    }
+
+    const isOwner = order.customer.toString() === req.user._id.toString();
+    const isSeller = req.user.role === "seller";
+
+    if (!isOwner && !isSeller) {
+      return res.status(403).json({
+        error: { message: "Access denied" },
+      });
+    }
+
+    return res.status(200).json(order);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: { message: "Error fetching order" },
+    });
+  }
+}
+
+// PATCH order status (seller)
+export async function updateOrderStatus(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        error: { message: "Invalid order ID" },
+      });
+    }
+
+    if (
+      !req.body ||
+      typeof req.body !== "object" ||
+      Array.isArray(req.body) ||
+      req.body.status !== "processed"
+    ) {
+      return res.status(400).json({
+        error: { message: "Only status 'processed' is allowed" },
+      });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      id,
+      { $set: { status: "processed" } },
+      { new: true, runValidators: true },
+    );
+
+    if (!order) {
+      return res.status(404).json({
+        error: { message: "Order not found" },
+      });
+    }
+
+    return res.status(200).json(order);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: { message: "Error updating order status" },
+    });
+  }
+}
