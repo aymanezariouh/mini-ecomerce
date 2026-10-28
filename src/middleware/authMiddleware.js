@@ -8,7 +8,9 @@ export async function protect(req, res, next) {
 
     if (!authorization || !authorization.startsWith("Bearer ")) {
       return res.status(401).json({
-        message: "Authentication required",
+        error: {
+          message: "Authentication required",
+        },
       });
     }
 
@@ -16,7 +18,9 @@ export async function protect(req, res, next) {
 
     if (!token) {
       return res.status(401).json({
-        message: "Token missing",
+        error: {
+          message: "Token missing",
+        },
       });
     }
 
@@ -26,7 +30,9 @@ export async function protect(req, res, next) {
 
     if (!user) {
       return res.status(401).json({
-        message: "User no longer exists",
+        error: {
+          message: "User no longer exists",
+        },
       });
     }
 
@@ -40,14 +46,18 @@ export async function protect(req, res, next) {
       error.name === "NotBeforeError"
     ) {
       return res.status(401).json({
-        message: "Invalid or expired token",
+        error: {
+          message: "Invalid or expired token",
+        },
       });
     }
 
     console.error(error);
 
     return res.status(500).json({
-      message: "Authentication error",
+      error: {
+        message: "Authentication error",
+      },
     });
   }
 }
@@ -56,7 +66,9 @@ export async function protect(req, res, next) {
 export function sellerOnly(req, res, next) {
   if (!req.user || req.user.role !== "seller") {
     return res.status(403).json({
-      message: "Seller access required",
+      error: {
+        message: "Seller access required",
+      },
     });
   }
 
