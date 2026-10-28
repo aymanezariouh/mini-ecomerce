@@ -11,6 +11,7 @@ const productSchema = new mongoose.Schema(
 
     description: {
       type: String,
+      trim: true,
       maxlength: 500,
     },
 
@@ -19,8 +20,8 @@ const productSchema = new mongoose.Schema(
       required: true,
       min: 1,
       validate: {
-        validator: Number.isInteger,
-        message: "Price must be an integer",
+        validator: Number.isSafeInteger,
+        message: "Price must be a safe integer",
       },
     },
 

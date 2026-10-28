@@ -9,7 +9,9 @@ export async function getProducts(req, res) {
     return res.status(200).json(products);
   } catch (error) {
     return res.status(500).json({
-      message: "Error fetching products",
+      error: {
+        message: "Error fetching products",
+      },
     });
   }
 }
@@ -21,7 +23,9 @@ export async function getProductById(req, res) {
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(400).json({
-        message: "Invalid product ID",
+        error: {
+          message: "Invalid product ID",
+        },
       });
     }
 
@@ -29,14 +33,18 @@ export async function getProductById(req, res) {
 
     if (!product) {
       return res.status(404).json({
-        message: "Product not found",
+        error: {
+          message: "Product not found",
+        },
       });
     }
 
     return res.status(200).json(product);
   } catch (error) {
     return res.status(500).json({
-      message: "Error fetching product",
+      error: {
+        message: "Error fetching product",
+      },
     });
   }
 }
