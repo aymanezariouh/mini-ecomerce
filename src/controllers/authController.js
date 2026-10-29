@@ -5,6 +5,12 @@ import jwt from "jsonwebtoken";
 // REGISTER
 export async function register(req, res) {
   try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({
+        error: { message: "Request body is required" },
+      });
+    }
+
     const { name, email, password } = req.body;
 
     if (
@@ -16,7 +22,7 @@ export async function register(req, res) {
       password.length < 8
     ) {
       return res.status(400).json({
-        message: "Invalid registration data",
+        error: { message: "Invalid registration data" },
       });
     }
 
@@ -28,7 +34,7 @@ export async function register(req, res) {
 
     if (existingUser) {
       return res.status(409).json({
-        message: "Email already registered",
+        error: { message: "Email already registered" },
       });
     }
 
@@ -53,14 +59,14 @@ export async function register(req, res) {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: "Email already registered",
+        error: { message: "Email already registered" },
       });
     }
 
     console.error(error);
 
     return res.status(500).json({
-      message: "Registration failed",
+      error: { message: "Registration failed" },
     });
   }
 }
@@ -68,11 +74,22 @@ export async function register(req, res) {
 // LOGIN
 export async function login(req, res) {
   try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({
+        error: { message: "Request body is required" },
+      });
+    }
+
     const { email, password } = req.body;
 
-    if (typeof email !== "string" || typeof password !== "string") {
+    if (
+      typeof email !== "string" ||
+      !email.trim() ||
+      typeof password !== "string" ||
+      !password
+    ) {
       return res.status(400).json({
-        message: "Email and password are required",
+        error: { message: "Email and password are required" },
       });
     }
 
@@ -82,7 +99,7 @@ export async function login(req, res) {
 
     if (!user) {
       return res.status(401).json({
-        message: "Invalid credentials",
+        error: { message: "Invalid credentials" },
       });
     }
 
@@ -90,7 +107,7 @@ export async function login(req, res) {
 
     if (!isMatch) {
       return res.status(401).json({
-        message: "Invalid credentials",
+        error: { message: "Invalid credentials" },
       });
     }
 
@@ -117,7 +134,7 @@ export async function login(req, res) {
     console.error(error);
 
     return res.status(500).json({
-      message: "Login failed",
+      error: { message: "Login failed" },
     });
   }
 }
