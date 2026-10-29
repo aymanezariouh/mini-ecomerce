@@ -62,6 +62,17 @@ export async function protect(req, res, next) {
   }
 }
 
+// Check that the logged-in user is a customer
+export function customerOnly(req, res, next) {
+  if (!req.user || req.user.role !== "customer") {
+    return res.status(403).json({
+      error: { message: "Customer access required" },
+    });
+  }
+
+  next();
+}
+
 // Check that the logged-in user is a seller
 export function sellerOnly(req, res, next) {
   if (!req.user || req.user.role !== "seller") {
