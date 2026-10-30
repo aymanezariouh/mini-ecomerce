@@ -170,11 +170,11 @@ npm test
 npm run sql:verify
 ```
 
-Jest + Supertest exécutent les huit scénarios obligatoires et leurs cas limites : calcul multiligne, quantités, authentification, interdiction de création produit par un client, faux total, isolation des clients, refus sans sauvegarde d'un produit indisponible et conservation des prix historiques. Les tests couvrent également produits, rôles, JWT, entiers sûrs, idempotence et format d'erreur.
+Jest + Supertest exécutent les huit scénarios obligatoires : calcul multiligne, quantités invalides, authentification, interdiction de créer un produit pour un client, faux total, isolation des clients, refus d'un produit indisponible sans sauvegarde et conservation des prix historiques.
 
 Chaque suite crée **son propre processus MongoDB temporaire** avec `mongodb-memory-server`, sans charger `.env` ni utiliser `MONGODB_URI`. Les suppressions de tests sont limitées à cette connexion après contrôle du nom, de l'hôte et du port. Le développement et la production ne sont jamais nettoyés. Les cas sont réinitialisés indépendamment et exécutés en série.
 
-Le premier lancement télécharge MongoDB 8.0.17 dans le cache ignoré `node_modules/.cache/mongodb-memory-server`. Pour une machine hors ligne, définir `MONGOMS_SYSTEM_BINARY` vers un exécutable `mongod` 8.0.17 déjà installé. L'avertissement Node relatif aux modules VM expérimentaux est attendu avec Jest en ES modules ; la commande est conforme à la [documentation Jest](https://jestjs.io/docs/ecmascript-modules).
+Le premier lancement télécharge MongoDB 8.2.6 dans le cache ignoré `node_modules/.cache/mongodb-memory-server`. Pour une machine hors ligne, définir `MONGOMS_SYSTEM_BINARY` vers un exécutable `mongod` 8.2.6 déjà installé. L'avertissement Node relatif aux modules VM expérimentaux est attendu avec Jest en ES modules ; la commande est conforme à la [documentation Jest](https://jestjs.io/docs/ecmascript-modules).
 
 ## SQLite indépendant
 

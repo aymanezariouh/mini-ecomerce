@@ -26,7 +26,7 @@
   "type": "module",
   "config": {
     "mongodbMemoryServer": {
-      "version": "8.0.17",
+      "version": "8.2.6",
       "downloadDir": "./node_modules/.cache/mongodb-memory-server",
       "preferGlobalPath": false,
       "disablePostinstall": true
