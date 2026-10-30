@@ -1,12 +1,15 @@
 import Database from "better-sqlite3";
 import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
-const databasePath = fileURLToPath(new URL("./boutique.db", import.meta.url));
+const databasePath = process.argv[3]
+  ? resolve(process.argv[3])
+  : fileURLToPath(new URL("./demo.db", import.meta.url));
 
 const customerId = Number(process.argv[2]);
 
 if (!Number.isSafeInteger(customerId) || customerId <= 0) {
-  console.error("Please provide a valid customer ID");
+  console.error("Usage : node sql/getCustomerOrders.js <identifiant client> [base.db]");
   process.exit(1);
 }
 
@@ -26,9 +29,11 @@ try {
       orders.customerId,
       orders.totalCents,
       orders.status,
-      orders.createdAt
+      orders.createdAt,
+      orders.customerNote
     FROM orders
     WHERE orders.customerId = ?
+    ORDER BY orders.id
   `);
 
   // Execute query with a safe parameter
