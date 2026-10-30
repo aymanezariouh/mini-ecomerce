@@ -1,11 +1,20 @@
 {
   "name": "mini-breif",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API Mini E-commerce - Sprint 02",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/server.js"
+    "start": "node src/server.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/seed/demoSeed.js",
+    "seed:seller": "node src/seed/sellerSeed.js",
+    "sql:init": "node sql/init.js",
+    "sql:orders": "node sql/getCustomerOrders.js",
+    "sql:verify": "node sql/verify.js"
   },
   "repository": {
     "type": "git",
@@ -15,6 +24,14 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "config": {
+    "mongodbMemoryServer": {
+      "version": "8.0.17",
+      "downloadDir": "./node_modules/.cache/mongodb-memory-server",
+      "preferGlobalPath": false,
+      "disablePostinstall": true
+    }
+  },
   "bugs": {
     "url": "https://github.com/aymanezariouh/mini-ecomerce/issues"
   },
@@ -26,6 +43,12 @@
     "express": "^5.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.4",
-    "nodemon": "^3.1.14"
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "jest": "^30.5.2",
+    "mongodb-memory-server": "^11.3.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.3.1"
   }
 }
