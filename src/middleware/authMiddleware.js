@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User from "../modules/User.js";
 
 // Verify that the user is logged in
@@ -25,6 +26,16 @@ export async function protect(req, res, next) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (
+      typeof decoded !== "object" ||
+      typeof decoded.id !== "string" ||
+      !mongoose.isValidObjectId(decoded.id)
+    ) {
+      return res.status(401).json({
+        error: { message: "Invalid token user ID" },
+      });
+    }
 
     const user = await User.findById(decoded.id);
 

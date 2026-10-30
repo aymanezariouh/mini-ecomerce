@@ -205,11 +205,16 @@ export async function updateOrderStatus(req, res) {
       });
     }
 
-    const order = await Order.findByIdAndUpdate(
-      id,
+    let order = await Order.findOneAndUpdate(
+      { _id: id, status: "new" },
       { $set: { status: "processed" } },
       { new: true, runValidators: true },
     );
+
+    // A repeated request returns the stored order without changing updatedAt.
+    if (!order) {
+      order = await Order.findById(id);
+    }
 
     if (!order) {
       return res.status(404).json({
