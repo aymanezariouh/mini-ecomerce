@@ -1,0 +1,37 @@
+services:
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGODB_URI: mongodb://mongo:27017/mini_ecommerce
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET in .env}
+      SELLER_NAME: ${SELLER_NAME:-Shop Seller}
+      SELLER_EMAIL: ${SELLER_EMAIL:-}
+      SELLER_PASSWORD: ${SELLER_PASSWORD:-}
+      CUSTOMER_ONE_NAME: ${CUSTOMER_ONE_NAME:-Customer One}
+      CUSTOMER_ONE_EMAIL: ${CUSTOMER_ONE_EMAIL:-}
+      CUSTOMER_ONE_PASSWORD: ${CUSTOMER_ONE_PASSWORD:-}
+      CUSTOMER_TWO_NAME: ${CUSTOMER_TWO_NAME:-Customer Two}
+      CUSTOMER_TWO_EMAIL: ${CUSTOMER_TWO_EMAIL:-}
+      CUSTOMER_TWO_PASSWORD: ${CUSTOMER_TWO_PASSWORD:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+  mongo:
+    image: mongo:8.0.17
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
