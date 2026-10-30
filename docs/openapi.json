@@ -1,0 +1,1673 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mini E-commerce — Sprint 02",
+    "version": "1.0.0",
+    "description": "Contrat issu des routes et contrôleurs Express. Les montants sont exprimés en centimes entiers. Les erreurs JSON suivent {\"error\":{\"message\":\"Description\"}}. Les routes inconnues renvoient 404 et le JSON mal formé 400. Le catalogue est public ; les permissions sont vérifiées depuis le compte associé au JWT. Cette spécification est la référence des endpoints ; la collection Postman reprend ces opérations avec des scénarios et assertions."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Serveur courant"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Santé"
+    },
+    {
+      "name": "Authentification"
+    },
+    {
+      "name": "Produits"
+    },
+    {
+      "name": "Commandes"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Vérifier que l’API répond",
+        "tags": [
+          "Santé"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "register",
+        "summary": "Créer un compte client",
+        "tags": [
+          "Authentification"
+        ],
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid registration data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid registration data"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Email already registered"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Inscription publique. Un vendeur doit être créé avec le seed MongoDB. Aucun hash ni mot de passe n’est renvoyé.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              },
+              "example": {
+                "name": "Client Exemple",
+                "email": "client@example.test",
+                "password": "<mot de passe de 8 caractères minimum>"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Obtenir un jeton JWT",
+        "tags": [
+          "Authentification"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Email and password are required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Email and password are required"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid credentials"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Email normalisé comme lors de l’inscription. Le jeton expire après un jour.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              },
+              "example": {
+                "email": "client@example.test",
+                "password": "<votre mot de passe>"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "operationId": "getProducts",
+        "summary": "Lister tous les produits",
+        "tags": [
+          "Produits"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Public. Inclut les produits disponibles et indisponibles ; aucun filtre ni pagination."
+      },
+      "post": {
+        "operationId": "createProduct",
+        "summary": "Créer un produit",
+        "tags": [
+          "Produits"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid product data"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permissions insuffisantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Permissions insuffisantes"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : vendeur uniquement. available vaut true par défaut. Tout champ non autorisé est rejeté.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreate"
+              },
+              "example": {
+                "name": "Clavier",
+                "description": "Clavier USB",
+                "priceCents": 2500,
+                "available": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Identifiant MongoDB ObjectId (24 caractères hexadécimaux).",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getProductById",
+        "summary": "Consulter un produit",
+        "tags": [
+          "Produits"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid product ID"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Product not found"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateProduct",
+        "summary": "Modifier un produit",
+        "tags": [
+          "Produits"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid product ID, empty body or invalid product data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid product ID, empty body or invalid product data"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permissions insuffisantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Permissions insuffisantes"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Product not found"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : vendeur uniquement. Au moins un champ autorisé est requis. Les achats passés conservent leur nom et leur prix historiques.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductUpdate"
+              },
+              "example": {
+                "priceCents": 2800,
+                "available": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "summary": "Créer une commande",
+        "tags": [
+          "Commandes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid items, duplicate products, invalid quantity or unsafe total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid items, duplicate products, invalid quantity or unsafe total"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permissions insuffisantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Permissions insuffisantes"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Product not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Product not found"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Product unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Product unavailable"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : client uniquement. Aucune sauvegarde avant validation de toutes les lignes. Produits existants et disponibles, quantités 1 à 10, aucun doublon. Prix et total calcul’s depuis MongoDB avec arithmétique entière sûre (maximum 9007199254740991). Statut initial new et instantanés du nom/prix conservés.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderInput"
+              },
+              "example": {
+                "items": [
+                  {
+                    "productId": "507f1f77bcf86cd799439011",
+                    "quantity": 2
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getAllOrders",
+        "summary": "Lister toutes les commandes",
+        "tags": [
+          "Commandes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SellerOrder"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permissions insuffisantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Permissions insuffisantes"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : vendeur uniquement. Tri décroissant par createdAt. Le champ customer contient {_id, name, email}."
+      }
+    },
+    "/api/orders/me": {
+      "get": {
+        "operationId": "getMyOrders",
+        "summary": "Lister mes commandes",
+        "tags": [
+          "Commandes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permissions insuffisantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Permissions insuffisantes"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : client uniquement. Seules les commandes du client authentifié sont retournées, par createdAt décroissant."
+      }
+    },
+    "/api/orders/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Identifiant MongoDB ObjectId (24 caractères hexadécimaux).",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getOrderById",
+        "summary": "Consulter une commande",
+        "tags": [
+          "Commandes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid order ID"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Access denied"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Order not found"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : client propriétaire ou vendeur. "
+      }
+    },
+    "/api/orders/{id}/status": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Identifiant MongoDB ObjectId (24 caractères hexadécimaux).",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          }
+        }
+      ],
+      "patch": {
+        "operationId": "updateOrderStatus",
+        "summary": "Traiter une commande",
+        "tags": [
+          "Commandes"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order ID or only status 'processed' is allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Invalid order ID or only status 'processed' is allowed"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentification requise, jeton invalide ou expiré",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Authentification requise, jeton invalide ou expiré"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permissions insuffisantes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Permissions insuffisantes"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Order not found"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur interne du serveur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": {
+                    "message": "Erreur interne du serveur"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Accès : vendeur uniquement. Transition new vers processed uniquement. Répéter processed renvoie la même commande traitée (200). Le retour à new est refusé (400).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderStatusInput"
+              },
+              "example": {
+                "status": "processed"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Récupérer le token avec POST /api/auth/login, puis Authorization: Bearer <token>."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "message"
+            ],
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OK"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "status": "OK",
+          "message": "Mini E-commerce API is running"
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "seller"
+            ]
+          }
+        },
+        "example": {
+          "id": "507f1f77bcf86cd799439031",
+          "name": "Client Exemple",
+          "email": "client@example.test",
+          "role": "customer"
+        }
+      },
+      "RegisterInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "description": "Compte customer uniquement : tout rôle fourni est ignoré. Email non vide, converti en minuscules et sans espaces en début/fin, unique. Les autres champs sont ignorés.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "writeOnly": true
+          }
+        }
+      },
+      "LoginInput": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "writeOnly": true
+          }
+        }
+      },
+      "RegistrationResponse": {
+        "type": "object",
+        "required": [
+          "message",
+          "user"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "example": {
+          "message": "User registered successfully",
+          "user": {
+            "id": "507f1f77bcf86cd799439031",
+            "name": "Client Exemple",
+            "email": "client@example.test",
+            "role": "customer"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "message",
+          "token",
+          "user"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "description": "JWT signé, valable un jour."
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "example": {
+          "message": "Login successful",
+          "token": "<JWT retourné par la connexion>",
+          "user": {
+            "id": "507f1f77bcf86cd799439031",
+            "name": "Client Exemple",
+            "email": "client@example.test",
+            "role": "customer"
+          }
+        }
+      },
+      "ProductCreate": {
+        "type": "object",
+        "required": [
+          "name",
+          "priceCents"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Nom non vide après suppression des espaces en début et fin.",
+            "example": "Clavier"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Description facultative, espaces en début et fin supprimés.",
+            "example": "Clavier USB"
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "example": 2500
+          },
+          "available": {
+            "type": "boolean",
+            "default": true,
+            "example": true
+          }
+        }
+      },
+      "ProductUpdate": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Nom non vide après suppression des espaces en début et fin.",
+            "example": "Clavier"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Description facultative, espaces en début et fin supprimés.",
+            "example": "Clavier USB"
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "example": 2500
+          },
+          "available": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": [
+          "_id",
+          "name",
+          "priceCents",
+          "available",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Nom non vide après suppression des espaces en début et fin.",
+            "example": "Clavier"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Description facultative, espaces en début et fin supprimés.",
+            "example": "Clavier USB"
+          },
+          "priceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "example": 2500
+          },
+          "available": {
+            "type": "boolean",
+            "default": true,
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30T10:00:00.000Z"
+          },
+          "__v": {
+            "type": "integer"
+          }
+        },
+        "example": {
+          "_id": "507f1f77bcf86cd799439011",
+          "name": "Clavier",
+          "description": "Clavier USB",
+          "priceCents": 2500,
+          "available": true,
+          "createdAt": "2026-10-30T10:00:00.000Z",
+          "updatedAt": "2026-10-30T10:00:00.000Z",
+          "__v": 0
+        }
+      },
+      "OrderInput": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "description": "1 à 10 produits distincts. Seuls productId et quantity sont utilisés. Le client authentifié fournit implicitement son identité. Les champs client totalCents, customer, status, unitPriceCents ou productName sont ignorés : le serveur calcule les prix et totaux depuis MongoDB avant tout enregistrement.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "productId",
+                "quantity"
+              ],
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "pattern": "^[a-fA-F0-9]{24}$",
+                  "example": "507f1f77bcf86cd799439011"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                }
+              }
+            }
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": [
+          "_id",
+          "product",
+          "productName",
+          "quantity",
+          "unitPriceCents"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "product": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "productName": {
+            "type": "string",
+            "description": "Nom historique au moment de l’achat."
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "unitPriceCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "Prix historique en centimes au moment de l’achat."
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "_id",
+          "customer",
+          "items",
+          "totalCents",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "customer": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "totalCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "processed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30T10:00:00.000Z"
+          },
+          "__v": {
+            "type": "integer"
+          }
+        },
+        "example": {
+          "_id": "507f1f77bcf86cd799439021",
+          "customer": "507f1f77bcf86cd799439031",
+          "items": [
+            {
+              "_id": "507f1f77bcf86cd799439041",
+              "product": "507f1f77bcf86cd799439011",
+              "productName": "Clavier",
+              "quantity": 2,
+              "unitPriceCents": 2500
+            }
+          ],
+          "totalCents": 5000,
+          "status": "new",
+          "createdAt": "2026-10-30T10:00:00.000Z",
+          "updatedAt": "2026-10-30T10:00:00.000Z",
+          "__v": 0
+        }
+      },
+      "OrderStatusInput": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "description": "Seul processed est accepté. Les autres champs sont ignorés.",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "processed"
+            ]
+          }
+        }
+      },
+      "SellerOrder": {
+        "type": "object",
+        "required": [
+          "_id",
+          "customer",
+          "items",
+          "totalCents",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{24}$",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "customer": {
+            "type": "object",
+            "nullable": true,
+            "required": [
+              "_id",
+              "name",
+              "email"
+            ],
+            "properties": {
+              "_id": {
+                "type": "string",
+                "pattern": "^[a-fA-F0-9]{24}$",
+                "example": "507f1f77bcf86cd799439011"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            }
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "totalCents": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "processed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30T10:00:00.000Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-30T10:00:00.000Z"
+          },
+          "__v": {
+            "type": "integer"
+          }
+        },
+        "example": {
+          "_id": "507f1f77bcf86cd799439021",
+          "customer": {
+            "_id": "507f1f77bcf86cd799439031",
+            "name": "Client Exemple",
+            "email": "client@example.test"
+          },
+          "items": [
+            {
+              "_id": "507f1f77bcf86cd799439041",
+              "product": "507f1f77bcf86cd799439011",
+              "productName": "Clavier",
+              "quantity": 2,
+              "unitPriceCents": 2500
+            }
+          ],
+          "totalCents": 5000,
+          "status": "new",
+          "createdAt": "2026-10-30T10:00:00.000Z",
+          "updatedAt": "2026-10-30T10:00:00.000Z",
+          "__v": 0
+        },
+        "description": "Pour GET /api/orders, le client est renseigné avec son identifiant, son nom et son email ; aucun mot de passe ni hash."
+      }
+    }
+  }
+}
