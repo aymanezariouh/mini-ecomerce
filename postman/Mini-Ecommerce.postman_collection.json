@@ -1,0 +1,2746 @@
+{
+  "info": {
+    "_postman_id": "b2276c30-6108-4d63-93b8-80a94e412132",
+    "name": "Mini E-commerce — Sprint 02",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Scénarios dérivés de docs/openapi.json (contrat des routes). Importer également Mini-Ecommerce.postman_environment.json, sélectionner cet environnement, renseigner sellerEmail/sellerPassword à partir du seed, puis lancer tous les dossiers dans leur ordre avec Collection Runner. baseUrl ne doit pas avoir de slash final. Deux nouveaux clients, trois produits et une commande sont créés à chaque exécution ; utiliser une base de démonstration. Les identifiants aléatoires et JWT sont stockés uniquement dans pm.variables pendant le run. Pour envoyer une requête seule, renseigner manuellement les variables correspondantes dans votre environnement local. Ne jamais exporter de credentials réels ni de jetons dans Git. Les assertions vérifient codes HTTP, format des erreurs, permissions, calculs, isolation, absence de sauvegarde partielle et historique des achats."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "missingObjectId",
+      "value": "000000000000000000000000",
+      "type": "string"
+    },
+    {
+      "key": "invalidToken",
+      "value": "invalid-token-for-negative-test",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 — Santé et authentification",
+      "item": [
+        {
+          "name": "Santé de l’API",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Santé de l’API",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"API disponible\", function () { pm.expect(data.status).to.eql(\"OK\"); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Inscription client — rôle vendeur ignoré",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Crée un client et un mot de passe aléatoires pour chaque exécution. Le rôle envoyé ne doit jamais permettre de devenir vendeur. Les variables sont temporaires pendant le Collection Runner.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Client Postman\",\n  \"email\": \"  {{customerEmail}}  \",\n  \"password\": \"{{generatedPassword}}\",\n  \"role\": \"seller\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const suffix = pm.variables.replaceIn(\"{{$guid}}\");",
+                  "pm.variables.set(\"runSuffix\", suffix);",
+                  "pm.variables.set(\"customerEmail\", \"customer-\" + suffix + \"@example.test\");",
+                  "pm.variables.set(\"otherCustomerEmail\", \"other-\" + suffix + \"@example.test\");",
+                  "pm.variables.set(\"generatedPassword\", \"Postman-\" + pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Compte client et email normalisé\", function () { pm.expect(data.user.role).to.eql(\"customer\"); pm.expect(data.user.email).to.eql(pm.variables.get(\"customerEmail\")); });",
+                  "pm.variables.set(\"customerId\", data.user.id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Email déjà utilisé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Email déjà utilisé",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Doublon\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{generatedPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Inscription du second client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Inscription du second client",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Autre Client Postman\",\n  \"email\": \"{{otherCustomerEmail}}\",\n  \"password\": \"{{generatedPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"otherCustomerId\", data.user.id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Connexion client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Connexion client",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{generatedPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"JWT client présent\", function () { pm.expect(data.token).to.be.a(\"string\").and.not.empty; pm.expect(data.user.role).to.eql(\"customer\"); });",
+                  "pm.variables.set(\"customerToken\", data.token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Connexion second client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Connexion second client",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{otherCustomerEmail}}\",\n  \"password\": \"{{generatedPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"otherCustomerToken\", data.token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Connexion vendeur du seed",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Utilise les identifiants vendeur configurés localement. Aucun secret n’est inclus dans les fichiers exportés.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{sellerEmail}}\",\n  \"password\": \"{{sellerPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get(\"sellerEmail\") || !pm.variables.get(\"sellerPassword\")) { throw new Error(\"Renseigner sellerEmail et sellerPassword dans l’environnement après le seed MongoDB.\"); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Compte vendeur\", function () { pm.expect(data.user.role).to.eql(\"seller\"); pm.expect(data.token).to.be.a(\"string\").and.not.empty; });",
+                  "pm.variables.set(\"sellerToken\", data.token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mot de passe trop court",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Mot de passe trop court",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Invalide\",\n  \"email\": \"invalid-{{runSuffix}}@example.test\",\n  \"password\": \"short\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Identifiants invalides",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Identifiants invalides",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 — Produits",
+      "item": [
+        {
+          "name": "Catalogue public",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Catalogue public",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Liste de produits\", function () { pm.expect(data).to.be.an(\"array\"); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Créer produit A — disponibilité par défaut",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Créer produit A — disponibilité par défaut",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Clavier Postman {{runSuffix}}\",\n  \"priceCents\": 2500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"productId\", data._id);",
+                  "pm.variables.set(\"originalProductName\", data.name);",
+                  "pm.test(\"Disponible par défaut\", function () { pm.expect(data.available).to.eql(true); pm.expect(data.priceCents).to.eql(2500); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Créer produit B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Créer produit B",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Souris Postman {{runSuffix}}\",\n  \"priceCents\": 1100,\n  \"available\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"secondProductId\", data._id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Créer produit indisponible",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Créer produit indisponible",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Produit indisponible {{runSuffix}}\",\n  \"priceCents\": 500,\n  \"available\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"unavailableProductId\", data._id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Consulter produit public",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "Consulter produit public",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Produit attendu\", function () { pm.expect(data._id).to.eql(pm.variables.get(\"productId\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Modifier la description",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "Modifier la description",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Description modifiée par le scénario Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Description mise à jour\", function () { pm.expect(data.description).to.eql(\"Description modifiée par le scénario Postman\"); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Création sans jeton",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Création sans jeton",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Interdit\",\n  \"priceCents\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Création interdite au client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Création interdite au client",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Interdit\",\n  \"priceCents\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Nom de produit vide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Nom de produit vide",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"   \",\n  \"priceCents\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Prix non entier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Prix non entier",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Prix invalide\",\n  \"priceCents\": 1.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Champ produit interdit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "Champ produit interdit",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"seller\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Disponibilité non booléenne",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "Disponibilité non booléenne",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Disponibilité invalide\",\n  \"priceCents\": 500,\n  \"available\": \"true\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Identifiant produit invalide",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/not-an-object-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "not-an-object-id"
+              ]
+            },
+            "description": "Identifiant produit invalide",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Produit inexistant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{missingObjectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{missingObjectId}}"
+              ]
+            },
+            "description": "Produit inexistant",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 — Commandes et séparation des clients",
+      "item": [
+        {
+          "name": "Créer commande — total et identité calculés côté serveur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Créer commande — total et identité calculés côté serveur",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2,\n      \"unitPriceCents\": 1\n    },\n    {\n      \"productId\": \"{{secondProductId}}\",\n      \"quantity\": 3\n    }\n  ],\n  \"totalCents\": 1,\n  \"customer\": \"{{otherCustomerId}}\",\n  \"status\": \"processed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"orderId\", data._id);",
+                  "pm.test(\"Total MongoDB de 8300 centimes\", function () { pm.expect(data.totalCents).to.eql(8300); pm.expect(data.items[0].unitPriceCents).to.eql(2500); pm.expect(data.items[1].unitPriceCents).to.eql(1100); });",
+                  "pm.test(\"Client authentifié et statut initial\", function () { pm.expect(data.customer).to.eql(pm.variables.get(\"customerId\")); pm.expect(data.status).to.eql(\"new\"); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Mes commandes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "me"
+              ]
+            },
+            "description": "Mes commandes",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"orderCountBeforeInvalid\", data.length);",
+                  "pm.test(\"Uniquement mes commandes\", function () { pm.expect(data.some(order => order._id === pm.variables.get(\"orderId\"))).to.eql(true); data.forEach(order => pm.expect(order.customer).to.eql(pm.variables.get(\"customerId\"))); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Consulter ma commande",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Consulter ma commande",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Commande attendue\", function () { pm.expect(data._id).to.eql(pm.variables.get(\"orderId\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Autre client refusé",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Autre client refusé",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{otherCustomerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Commandes du second client séparées",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "me"
+              ]
+            },
+            "description": "Commandes du second client séparées",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{otherCustomerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Aucune commande du premier client\", function () { pm.expect(data).to.be.an(\"array\").that.is.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Lister toutes les commandes — vendeur",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Lister toutes les commandes — vendeur",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Client renseigné sans secrets\", function () { const order = data.find(order => order._id === pm.variables.get(\"orderId\")); pm.expect(order).to.be.an(\"object\"); pm.expect(order.customer._id).to.eql(pm.variables.get(\"customerId\")); pm.expect(order.customer.email).to.eql(pm.variables.get(\"customerEmail\")); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Consulter une commande — vendeur",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Consulter une commande — vendeur",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Commandes sans jeton",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "me"
+              ]
+            },
+            "description": "Commandes sans jeton",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Jeton invalide",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "me"
+              ]
+            },
+            "description": "Jeton invalide",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{invalidToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Toutes les commandes interdites au client",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Toutes les commandes interdites au client",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Création de commande interdite au vendeur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Création de commande interdite au vendeur",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Commande inexistante",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{missingObjectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{missingObjectId}}"
+              ]
+            },
+            "description": "Commande inexistante",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Identifiant commande invalide",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/not-an-object-id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "not-an-object-id"
+              ]
+            },
+            "description": "Identifiant commande invalide",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 — Rejet des commandes invalides sans sauvegarde partielle",
+      "item": [
+        {
+          "name": "Quantité zéro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Quantité zéro",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Quantité supérieure à dix",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Quantité supérieure à dix",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 11\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Produits en double",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Produits en double",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Commande sans lignes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Commande sans lignes",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Commande avec produit inexistant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Commande avec produit inexistant",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{missingObjectId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Produit indisponible après une ligne valide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "Produit indisponible après une ligne valide",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    },\n    {\n      \"productId\": \"{{unavailableProductId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\", function () { pm.response.to.have.status(409); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Vérifier absence de sauvegarde partielle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "me"
+              ]
+            },
+            "description": "Vérifier absence de sauvegarde partielle",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Nombre de commandes inchangé\", function () { pm.expect(data.length).to.eql(Number(pm.variables.get(\"orderCountBeforeInvalid\"))); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 — Historique et traitement vendeur",
+      "item": [
+        {
+          "name": "Changer le nom et prix actuel du produit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "Changer le nom et prix actuel du produit",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nouveau nom {{runSuffix}}\",\n  \"priceCents\": 9999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Prix et nom historiques conservés",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Prix et nom historiques conservés",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Achat historique inchangé\", function () { const line = data.items.find(item => item.product === pm.variables.get(\"productId\")); pm.expect(line.unitPriceCents).to.eql(2500); pm.expect(line.productName).to.eql(pm.variables.get(\"originalProductName\")); pm.expect(data.totalCents).to.eql(8300); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Traitement interdit au client",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "description": "Traitement interdit au client",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Traiter la commande",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "description": "Traiter la commande",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.variables.set(\"processedOrder\", JSON.stringify(data));",
+                  "pm.test(\"Commande traitée\", function () { pm.expect(data.status).to.eql(\"processed\"); pm.expect(data.totalCents).to.eql(8300); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Répéter le traitement — idempotence",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "description": "Répéter le traitement — idempotence",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Traitement idempotent, horodatage inclus\", function () { const previous = JSON.parse(pm.variables.get(\"processedOrder\")); pm.expect(data).to.deep.eql(previous); });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Retour à new interdit",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "description": "Retour à new interdit",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"new\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Traiter une commande inexistante",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{missingObjectId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{missingObjectId}}",
+                "status"
+              ]
+            },
+            "description": "Traiter une commande inexistante",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sellerToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "JSON mal formé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "JSON mal formé",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Route inexistante",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/route-inexistante",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "route-inexistante"
+              ]
+            },
+            "description": "Route inexistante",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 404\", function () { pm.response.to.have.status(404); });",
+                  "pm.test(\"Réponse JSON\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"); });",
+                  "const data = pm.response.json();",
+                  "pm.test(\"Aucun mot de passe ni hash exposé\", function () { pm.expect(JSON.stringify(data)).not.to.match(/\"password(?:Hash)?\"\\s*:/); });",
+                  "pm.test(\"Erreur standardisée\", function () { pm.expect(data.error.message).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}
